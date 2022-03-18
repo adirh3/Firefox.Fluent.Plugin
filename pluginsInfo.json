@@ -1,0 +1,9 @@
+{
+  "Name": "Firefox",
+  "DisplayName": "Firefox",
+  "Description": "Search for bookmarks and history in Firefox",
+  "PublisherName": "Blast Apps",
+  "Version": "1.0.0.0",
+  "URL": "https://github.com/adirh3/Firefox.Fluent.Plugin",
+  "IconGlyph": "\uEB41"
+}
