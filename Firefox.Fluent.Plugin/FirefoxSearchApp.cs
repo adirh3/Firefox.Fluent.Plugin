@@ -91,7 +91,7 @@ public class FirefoxSearchApp : ISearchApplication
 
     public IAsyncEnumerable<ISearchResult> SearchAsync(SearchRequest searchRequest, CancellationToken cancellationToken)
     {
-        if (searchRequest.SearchType == SearchType.SearchProcess)
+        if (searchRequest.SearchType == SearchType.SearchProcess && searchRequest.ProcessInfo.ProcessName != FirefoxTag)
             return SynchronousAsyncEnumerable.Empty;
 
         SearchMode searchMode = searchRequest.SearchedTag switch
