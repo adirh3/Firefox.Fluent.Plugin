@@ -125,7 +125,7 @@ public class FirefoxSearchApp : ISearchApplication
     private IEnumerable<ISearchResult> SearchBookmarks(SearchRequest searchRequest, CancellationToken cancellationToken)
     {
         return SearchInPlaces(
-            "select title, url, visit_count from (select * from moz_bookmarks inner join moz_places on moz_bookmarks.id==moz_places.id)",
+            "select title, url, visit_count from (select * from moz_bookmarks inner join moz_places on moz_bookmarks.fk==moz_places.id)",
             searchRequest, false, cancellationToken);
     }
 
