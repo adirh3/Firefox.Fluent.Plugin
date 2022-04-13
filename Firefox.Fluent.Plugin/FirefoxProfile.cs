@@ -2,15 +2,12 @@ namespace Firefox.Fluent.Plugin;
 
 public class FirefoxProfile
 {
-    public string Name { get; set; } = "Default";
-
     public bool IsEnabled { get; set; } = true;
-
-    internal string Path { get; init; }
+    public string Path { get; init; }
 
     private bool Equals(FirefoxProfile other)
     {
-        return Name == other.Name && IsEnabled == other.IsEnabled;
+        return Path == other.Path && IsEnabled == other.IsEnabled;
     }
 
     public override bool Equals(object? obj)
@@ -23,6 +20,6 @@ public class FirefoxProfile
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(Name, IsEnabled);
+        return HashCode.Combine(Path);
     }
 }

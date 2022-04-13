@@ -5,14 +5,32 @@ namespace Firefox.Fluent.Plugin;
 
 public class FirefoxSearchAppSettings : SearchApplicationSettingsPage
 {
+    private readonly List<FirefoxProfile> _firefoxProfiles =
+        FirefoxProfilesCollectionSettingManager.GetDefaultProfilePaths();
+
     public FirefoxSearchAppSettings(SearchApplicationInfo searchApplicationInfo) : base(searchApplicationInfo)
     {
     }
 
-    [Setting(Name = "Firefox profiles", Description = "Configure profiles to search in Firefox",
-        IconGlyph = "\uEC6C", SettingManagerType = typeof(FirefoxProfilesCollectionSettingManager))]
-    public List<FirefoxProfile> FirefoxProfiles { get; set; } =
-        FirefoxProfilesCollectionSettingManager.GetDefaultProfilePaths();
+    [Setting(Name = nameof(FirefoxProfiles), DisplayedName = "Firefox profiles",
+        Description = "Configure profiles to search in Firefox", IconGlyph = "\uEC6C",
+        SettingManagerType = typeof(FirefoxProfilesCollectionSettingManager))]
+    public List<FirefoxProfile> FirefoxProfiles
+    {
+        get => _firefoxProfiles;
+        set
+        {
+            foreach (FirefoxProfile firefoxProfile in value)
+            {
+                FirefoxProfile? firstOrDefault = _firefoxProfiles
+                    .FirstOrDefault(s => s.Path.Equals(firefoxProfile.Path, StringComparison.OrdinalIgnoreCase));
+                if (firstOrDefault == null)
+                    _firefoxProfiles.Add(firefoxProfile);
+                else
+                    firstOrDefault.IsEnabled = firefoxProfile.IsEnabled;
+            }
+        }
+    }
 
     public class FirefoxProfilesCollectionSettingManager : CollectionSettingManager<FirefoxProfile>
     {
@@ -30,7 +48,6 @@ public class FirefoxSearchAppSettings : SearchApplicationSettingsPage
                 string profileName = directoryInfo.Name;
                 return new FirefoxProfile
                 {
-                    Name = profileName,
                     Path = directoryInfo.FullName,
                     IsEnabled = profileName.Contains("default")
                 };
