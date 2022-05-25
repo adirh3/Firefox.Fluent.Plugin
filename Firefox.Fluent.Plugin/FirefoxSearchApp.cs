@@ -168,7 +168,7 @@ public class FirefoxSearchApp : ISearchApplication
                 CreateSqliteConnectionAndOpen(Path.Combine(firefoxProfile.Path, "favicons.sqlite"));
             using SqliteCommand iconsCommand = iconsSqliteConnection.CreateCommand();
             iconsCommand.CommandText =
-                "select data from (select * from moz_pages_w_icons join moz_icons_to_pages on moz_pages_w_icons.id == moz_icons_to_pages.page_id join moz_icons on moz_icons_to_pages.icon_id == moz_icons.id where page_url==$url)";
+                "select data from (select * from moz_pages_w_icons join moz_icons_to_pages on moz_pages_w_icons.id == moz_icons_to_pages.page_id join moz_icons on moz_icons_to_pages.icon_id == moz_icons.id where page_url==$url and width != 65535)";
             SqliteParameter urlParameter = iconsCommand.Parameters.AddWithValue("url", "");
 
             while (sqliteDataReader.Read())
