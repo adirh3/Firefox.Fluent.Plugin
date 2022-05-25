@@ -139,10 +139,12 @@ public class FirefoxSearchApp : ISearchApplication
     {
         foreach (FirefoxProfile firefoxProfile in _firefoxSearchAppSettings.FirefoxProfiles.Where(p => p.IsEnabled))
         {
-            using SqliteConnection placesSqliteConnection =
+            using SqliteConnection? placesSqliteConnection =
                 CreateSqliteConnectionAndOpen(Path.Combine(firefoxProfile.Path, "places.sqlite"));
+            if (placesSqliteConnection == null) 
+                continue;
+            
             string searchedText = searchRequest.SearchedText;
-
             var where = " where";
             using SqliteCommand sqliteCommand = placesSqliteConnection.CreateCommand();
             var paramCount = 0;
@@ -164,12 +166,13 @@ public class FirefoxSearchApp : ISearchApplication
             if (cancellationToken.IsCancellationRequested || !sqliteDataReader.HasRows)
                 yield break;
 
-            using SqliteConnection iconsSqliteConnection =
+            using SqliteConnection? iconsSqliteConnection =
                 CreateSqliteConnectionAndOpen(Path.Combine(firefoxProfile.Path, "favicons.sqlite"));
-            using SqliteCommand iconsCommand = iconsSqliteConnection.CreateCommand();
-            iconsCommand.CommandText =
-                "select data from (select * from moz_pages_w_icons join moz_icons_to_pages on moz_pages_w_icons.id == moz_icons_to_pages.page_id join moz_icons on moz_icons_to_pages.icon_id == moz_icons.id where page_url==$url and width != 65535)";
-            SqliteParameter urlParameter = iconsCommand.Parameters.AddWithValue("url", "");
+            using SqliteCommand? iconsCommand = iconsSqliteConnection?.CreateCommand();
+            if (iconsCommand != null)
+                iconsCommand.CommandText =
+                    "select data from (select * from moz_pages_w_icons join moz_icons_to_pages on moz_pages_w_icons.id == moz_icons_to_pages.page_id join moz_icons on moz_icons_to_pages.icon_id == moz_icons.id where page_url==$url and width != 65535)";
+            SqliteParameter? urlParameter = iconsCommand?.Parameters.AddWithValue("url", "");
 
             while (sqliteDataReader.Read())
             {
@@ -182,20 +185,23 @@ public class FirefoxSearchApp : ISearchApplication
                 double score = title.SearchTokens(searchedText);
                 if (score == 0)
                     score = title.SearchTokens(searchedText);
-
-                urlParameter.Value = url;
-                using SqliteDataReader iconsReader = iconsCommand.ExecuteReader();
+                
                 BitmapImageResult? bitmapImageResult = null;
-                if (iconsReader.HasRows && iconsReader.Read())
+                if (urlParameter != null)
                 {
-                    byte[] fieldValue = iconsReader.GetFieldValue<byte[]>(0);
-                    try
+                    urlParameter.Value = url;
+                    using SqliteDataReader iconsReader = iconsCommand!.ExecuteReader();
+                    if (iconsReader.HasRows && iconsReader.Read())
                     {
-                        bitmapImageResult = new BitmapImageResult(new MemoryStream(fieldValue));
-                    }
-                    catch (Exception)
-                    {
-                        // ignored, not supported icon
+                        byte[] fieldValue = iconsReader.GetFieldValue<byte[]>(0);
+                        try
+                        {
+                            bitmapImageResult = new BitmapImageResult(new MemoryStream(fieldValue));
+                        }
+                        catch (Exception)
+                        {
+                            // ignored, not supported icon
+                        }
                     }
                 }
 
@@ -205,15 +211,25 @@ public class FirefoxSearchApp : ISearchApplication
         }
     }
 
-    private static SqliteConnection CreateSqliteConnectionAndOpen(string path)
+    private static SqliteConnection? CreateSqliteConnectionAndOpen(string path)
     {
         var sqliteConnectionStringBuilder = new SqliteConnectionStringBuilder
         {
             Mode = SqliteOpenMode.ReadOnly,
-            DataSource = path
+            DataSource = path,
+            Pooling = false
         };
         var sqliteConnection = new SqliteConnection(sqliteConnectionStringBuilder.ConnectionString);
-        sqliteConnection.Open();
+        try
+        {
+            sqliteConnection.Open();
+        }
+        catch (SqliteException)
+        {
+            sqliteConnection.Dispose();
+            return null;
+        }
+
         return sqliteConnection;
     }
 
