@@ -42,8 +42,7 @@ public class FirefoxSearchApp : ISearchApplication
     private readonly SearchTag _bookmarkSearchTag = new()
     {
         Name = BookmarkTag,
-        IconGlyph = BookmarkIconGlyph,
-        Description = "search bookmarks"
+        IconGlyph = BookmarkIconGlyph
     };
 
     private readonly ObservableCollection<SearchTag> _bookmarkSearchTags;
@@ -53,15 +52,13 @@ public class FirefoxSearchApp : ISearchApplication
     private readonly SearchTag _firefoxSearchTag = new()
     {
         Name = FirefoxTag,
-        IconGlyph = "\uE81C",
-        Description = "search firefox"
+        IconGlyph = "\uE81C"
     };
 
     private readonly SearchTag _historySearchTag = new()
     {
         Name = HistoryTag,
-        IconGlyph = "\uE81C",
-        Description = "search history"
+        IconGlyph = "\uE81C"
     };
 
     private readonly ObservableCollection<SearchTag> _historySearchTags;
