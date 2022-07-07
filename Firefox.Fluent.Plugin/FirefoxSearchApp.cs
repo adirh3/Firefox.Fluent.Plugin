@@ -86,6 +86,45 @@ public class FirefoxSearchApp : ISearchApplication
         return _applicationInfo;
     }
 
+    public ValueTask<ISearchResult> GetSearchResultForId(object searchObjectId)
+    {
+        if (searchObjectId is not FirefoxObjectId firefoxObjectId) return ValueTask.FromResult<ISearchResult>(null);
+
+        BitmapImageResult bitmapImageResult = null;
+        try
+        {
+            using SqliteConnection iconsSqliteConnection =
+                CreateSqliteConnectionAndOpen(Path.Combine(firefoxObjectId.FirefoxPath, "favicons.sqlite"));
+            using SqliteCommand iconsCommand = iconsSqliteConnection?.CreateCommand();
+            if (iconsCommand != null)
+                iconsCommand.CommandText =
+                    "select data from (select * from moz_pages_w_icons join moz_icons_to_pages on moz_pages_w_icons.id == moz_icons_to_pages.page_id join moz_icons on moz_icons_to_pages.icon_id == moz_icons.id where page_url==$url and width != 65535)";
+            iconsCommand?.Parameters.AddWithValue("url", firefoxObjectId.Url);
+            using SqliteDataReader iconsReader = iconsCommand!.ExecuteReader();
+            if (iconsReader.HasRows && iconsReader.Read())
+            {
+                byte[] fieldValue = iconsReader.GetFieldValue<byte[]>(0);
+                try
+                {
+                    bitmapImageResult = new BitmapImageResult(new MemoryStream(fieldValue));
+                }
+                catch (Exception)
+                {
+                    // ignored, not supported icon
+                }
+            }
+        }
+        catch (Exception)
+        {
+            // ignored
+        }
+
+        return ValueTask.FromResult<ISearchResult>(new FirefoxSearchResult(firefoxObjectId.Title, firefoxObjectId.Url,
+                string.Empty, firefoxObjectId.IsHistory ? "History" : "Bookmark",
+                firefoxObjectId.IsHistory ? _historySearchTags : _bookmarkSearchTags, bitmapImageResult, 0)
+            {SearchObjectId = searchObjectId});
+    }
+
     public IAsyncEnumerable<ISearchResult> SearchAsync(SearchRequest searchRequest, CancellationToken cancellationToken)
     {
         if (searchRequest.SearchType == SearchType.SearchProcess && searchRequest.ProcessInfo.ProcessName != FirefoxTag)
@@ -136,11 +175,11 @@ public class FirefoxSearchApp : ISearchApplication
     {
         foreach (FirefoxProfile firefoxProfile in _firefoxSearchAppSettings.FirefoxProfiles.Where(p => p.IsEnabled))
         {
-            using SqliteConnection? placesSqliteConnection =
+            using SqliteConnection placesSqliteConnection =
                 CreateSqliteConnectionAndOpen(Path.Combine(firefoxProfile.Path, "places.sqlite"));
-            if (placesSqliteConnection == null) 
+            if (placesSqliteConnection == null)
                 continue;
-            
+
             string searchedText = searchRequest.SearchedText;
             var where = " where";
             using SqliteCommand sqliteCommand = placesSqliteConnection.CreateCommand();
@@ -163,13 +202,13 @@ public class FirefoxSearchApp : ISearchApplication
             if (cancellationToken.IsCancellationRequested || !sqliteDataReader.HasRows)
                 yield break;
 
-            using SqliteConnection? iconsSqliteConnection =
+            using SqliteConnection iconsSqliteConnection =
                 CreateSqliteConnectionAndOpen(Path.Combine(firefoxProfile.Path, "favicons.sqlite"));
-            using SqliteCommand? iconsCommand = iconsSqliteConnection?.CreateCommand();
+            using SqliteCommand iconsCommand = iconsSqliteConnection?.CreateCommand();
             if (iconsCommand != null)
                 iconsCommand.CommandText =
                     "select data from (select * from moz_pages_w_icons join moz_icons_to_pages on moz_pages_w_icons.id == moz_icons_to_pages.page_id join moz_icons on moz_icons_to_pages.icon_id == moz_icons.id where page_url==$url and width != 65535)";
-            SqliteParameter? urlParameter = iconsCommand?.Parameters.AddWithValue("url", "");
+            SqliteParameter urlParameter = iconsCommand?.Parameters.AddWithValue("url", "");
 
             while (sqliteDataReader.Read())
             {
@@ -182,8 +221,8 @@ public class FirefoxSearchApp : ISearchApplication
                 double score = title.SearchTokens(searchedText);
                 if (score == 0)
                     score = title.SearchTokens(searchedText);
-                
-                BitmapImageResult? bitmapImageResult = null;
+
+                BitmapImageResult bitmapImageResult = null;
                 if (urlParameter != null)
                 {
                     urlParameter.Value = url;
@@ -203,12 +242,21 @@ public class FirefoxSearchApp : ISearchApplication
                 }
 
                 yield return new FirefoxSearchResult(title, url, searchedText, isHistory ? "History" : "Bookmark",
-                    isHistory ? _historySearchTags : _bookmarkSearchTags, bitmapImageResult, score);
+                    isHistory ? _historySearchTags : _bookmarkSearchTags, bitmapImageResult, score)
+                {
+                    SearchObjectId = new FirefoxObjectId
+                    {
+                        Url = url,
+                        Title = title,
+                        IsHistory = isHistory,
+                        FirefoxPath = firefoxProfile.Path
+                    }
+                };
             }
         }
     }
 
-    private static SqliteConnection? CreateSqliteConnectionAndOpen(string path)
+    private static SqliteConnection CreateSqliteConnectionAndOpen(string path)
     {
         var sqliteConnectionStringBuilder = new SqliteConnectionStringBuilder
         {
@@ -237,4 +285,13 @@ public class FirefoxSearchApp : ISearchApplication
         Bookmarks,
         History
     }
+}
+
+public class FirefoxObjectId
+{
+    public string Url { get; set; }
+    public string Title { get; set; }
+
+    public bool IsHistory { get; set; }
+    public string FirefoxPath { get; set; }
 }

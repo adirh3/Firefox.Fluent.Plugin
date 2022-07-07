@@ -19,7 +19,7 @@ public sealed class FirefoxSearchResult : SearchResultBase
             IconGlyph = "\uE774";
         }
 
-        SearchObjectId = AdditionalInformation = Context = PinUniqueId = url;
+        AdditionalInformation = Context = PinUniqueId = url;
     }
 
     protected override void OnSelectedSearchResultChanged()
