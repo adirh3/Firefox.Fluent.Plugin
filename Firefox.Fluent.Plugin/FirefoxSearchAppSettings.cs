@@ -42,6 +42,9 @@ public class FirefoxSearchAppSettings : SearchApplicationSettingsPage
         internal static List<FirefoxProfile> GetDefaultProfilePaths()
         {
             string profilesPath = Environment.ExpandEnvironmentVariables(@"%appdata%\Mozilla\Firefox\Profiles\");
+            if (!Directory.Exists(profilesPath))
+                return new List<FirefoxProfile>();
+
             return Directory.EnumerateFiles(profilesPath, "places.sqlite", SearchOption.AllDirectories).Select(p =>
             {
                 DirectoryInfo directoryInfo = Directory.GetParent(p)!;
