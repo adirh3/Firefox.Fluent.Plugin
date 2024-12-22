@@ -77,8 +77,8 @@ public class FirefoxSearchApp : ISearchApplication
             DefaultSearchTags = new List<SearchTag> {_bookmarkSearchTag, _historySearchTag}
         };
         _applicationInfo.SettingsPage = _firefoxSearchAppSettings = new FirefoxSearchAppSettings(_applicationInfo);
-        _historySearchTags = new ObservableCollection<SearchTag> {_bookmarkSearchTag, _firefoxSearchTag};
-        _bookmarkSearchTags = new ObservableCollection<SearchTag> {_historySearchTag, _firefoxSearchTag};
+        _historySearchTags = new ObservableCollection<SearchTag> {_historySearchTag, _firefoxSearchTag};
+        _bookmarkSearchTags = new ObservableCollection<SearchTag> {_bookmarkSearchTag, _firefoxSearchTag};
     }
 
     public SearchApplicationInfo GetApplicationInfo()
